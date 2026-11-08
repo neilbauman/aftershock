@@ -7,7 +7,8 @@
 <link rel="stylesheet" href="/style.css">
 <script src="/api/config"></script>
 </head><body>
-<header class="top wide"><div class="row"><div class="brand">AFTERSHOCK · FACILITATOR<small id="cname">&nbsp;</small></div><span id="chip" class="chip">…</span></div></header>
+<header class="top wide"><div class="row"><div class="brand">AFTERSHOCK · FACILITATOR<small id="cname">&nbsp;</small></div><span style="display:flex;gap:8px;align-items:center"><span id="chip" class="chip">…</span><button id="cohortsBtn" class="chip" style="border:0;color:#fff;cursor:pointer">Cohorts ▾</button></span></div></header>
+<div id="cohorts" class="intro hidden"></div>
 <main class="wrap wide">
   <section id="login" class="hidden">
     <div class="grid2">
@@ -30,6 +31,7 @@
         <div class="card"><div class="kicker">Living Conditions Index · households</div>
           <p class="small muted">Dimension phases per household. LCI worst, mean, and number of dimensions at Phase 4+. “Known” = on a responder’s list.</p>
           <div style="overflow-x:auto"><table id="htable"></table></div></div>
+        <div class="card"><div class="kicker">Area severity map · municipalities (20% rule)</div><div id="areamap"></div><div id="provtable" class="small"></div></div>
         <div class="grid2">
           <div class="card"><div class="kicker">By population group (20% rule)</div><table id="gtable"></table></div>
           <div class="card"><div class="kicker">By location / pocket (20% rule)</div><table id="ltable"></table></div>

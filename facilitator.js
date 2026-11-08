@@ -1,4 +1,5 @@
-import { ACTS, TOTAL_ROUNDS, roundInfo, DIMS, INSTITUTIONS, INSTITUTION_ORDER, PROFILES, LOCATIONS, GROUPS, POCKETS, MUNIS, STAFF, AGENCIES, phaseOf, lciOf } from '/lib/scenario.js';
+import { SCENARIO_VERSION, ACTS, TOTAL_ROUNDS, roundInfo, DIMS, INSTITUTIONS, INSTITUTION_ORDER, PROFILES, LOCATIONS, GROUPS, POCKETS, MUNIS, PROVINCES, STAFF, AGENCIES, phaseOf, lciOf } from '/lib/scenario.js';
+import { mapSvg } from '/lib/story.js';
 
 const cfg = window.AFTERSHOCK;
 const $ = id => document.getElementById(id);
@@ -22,6 +23,7 @@ $('createForm').onsubmit = async e => {
   try {
     const r = await fetch('/api/fac', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', name: $('cnameIn').value, adminKey: $('ckey').value }) });
     const j = await r.json(); if (!r.ok) throw new Error(j.error);
+    localStorage.setItem('aftershock_admin', $('ckey').value);
     code = j.code; key = j.facilitator_key; start();
   } catch (err) { $('cerr').textContent = err.message; }
 };
@@ -30,6 +32,8 @@ async function start() {
   try {
     D = await api('state');
     localStorage.setItem('aftershock_fac_code', code); localStorage.setItem('aftershock_fac_key_' + code, key);
+    const known = JSON.parse(localStorage.getItem('aftershock_fac_cohorts') || '[]').filter(x => x.code !== code);
+    known.unshift({ code, key, name: D.cohort.name }); localStorage.setItem('aftershock_fac_cohorts', JSON.stringify(known.slice(0, 30)));
     history.replaceState(null, '', `/facilitator.html?c=${code}&k=${key}`);
     $('login').classList.add('hidden'); $('console').classList.remove('hidden');
     render();
@@ -40,6 +44,11 @@ async function poll() { if (!D || busy) return; try { D = await api('state'); re
 
 function render() {
   const c = D.cohort, r = D.rounds.find(x => x.number === c.current_round);
+  if (c.scenario_version !== SCENARIO_VERSION) {
+    $('rtitle').textContent = 'This cohort was created with an older version of the game';
+    $('rsub').textContent = 'Create a new cohort from the Cohorts menu (top right) and share its code with players.';
+    $('rbtns').innerHTML = ''; return;
+  }
   const open = r?.status === 'open';
   const cur = c.current_round ? roundInfo(c.current_round) : null;
   const nextN = c.current_round + 1, nx = nextN <= TOTAL_ROUNDS ? roundInfo(nextN) : null;
@@ -79,6 +88,8 @@ function render() {
   const head = l => `<tr><th>${l}</th><th>HH</th><th>Phase (20%)</th><th>Mean worst</th></tr>`;
   $('gtable').innerHTML = head('Group') + aggRows(D.lci.byGroup, GROUPS) + head('Municipality') + aggRows(D.lci.byMuni, Object.fromEntries(Object.entries(MUNIS).map(([k, v]) => [k, v.name])));
   $('ltable').innerHTML = head('Location / pocket') + aggRows(D.lci.byLoc, POCKETS);
+  $('areamap').innerHTML = mapSvg(null, null, { phases: Object.fromEntries(Object.entries(D.lci.byMuni || {}).map(([k, v]) => [k, v.phase20])), orchard: (D.world?.orchard?.families || 0) > 0 });
+  $('provtable').innerHTML = `<table>${head('Province')}${aggRows(D.lci.byProvince, Object.fromEntries(Object.entries(PROVINCES).map(([k, v]) => [k, v.name])))}</table><p class="muted">Areas with no households in this game are unshaded. Pockets (sites, the orchard) are scored separately below.</p>`;
 
   const last = D.world?.stats?.slice(-1)[0];
   if (last) {
@@ -150,3 +161,32 @@ $('facPush').onclick = async () => {
 
 if (code && key) start(); else showLogin();
 setInterval(poll, 10000);
+
+// ---------------------------------------------------------------- cohort management
+$('cohortsBtn').onclick = async () => {
+  const known = JSON.parse(localStorage.getItem('aftershock_fac_cohorts') || '[]');
+  const admin = localStorage.getItem('aftershock_admin');
+  let all = null;
+  if (admin) { try { const r = await fetch('/api/fac', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list', adminKey: admin }) }); if (r.ok) all = await r.json(); } catch {} }
+  const rows = (all || known).map(c => `<a class="card" style="display:block;text-decoration:none;color:inherit;${c.code === code ? 'border-color:var(--accent)' : ''}" href="/facilitator.html?c=${c.code}&k=${c.key}">
+      <b>${esc(c.name)}</b> <span class="small muted">· ${c.code}${c.code === code ? ' · open now' : ''}</span>
+      ${all ? `<br><span class="small muted">${c.players} players · ${c.current_round ? `Act ${Math.ceil(c.current_round / 2)} ${c.current_round % 2 ? 'family' : 'response'}` : 'not started'} · ${c.scenario} · created ${new Date(c.created_at).toLocaleDateString()}</span>` : ''}</a>`).join('');
+  $('cohorts').innerHTML = `<div class="wrap"><div class="kicker">Facilitator</div><h1>Cohorts</h1>
+    ${rows || '<p class="muted">No cohorts opened on this device yet.</p>'}
+    ${all ? '' : `<form id="adminForm" class="card"><label>Admin key (to list every cohort)</label><input id="adminKey"><p><button class="full secondary">Show all cohorts</button></p></form>`}
+    <form id="newCohort" class="card"><h2>New cohort</h2><label>Name</label><input id="ncName" required placeholder="e.g. Retreat 23–26 Nov">
+      ${admin ? '' : '<label>Admin key</label><input id="ncKey" required>'}<p><button class="full">Create cohort</button></p><p id="ncErr" class="small"></p></form></div>
+    <div class="bar2"><div class="row"><button id="cClose">Close</button></div></div>`;
+  $('cohorts').classList.remove('hidden');
+  $('cClose').onclick = () => $('cohorts').classList.add('hidden');
+  if ($('adminForm')) $('adminForm').onsubmit = e => { e.preventDefault(); localStorage.setItem('aftershock_admin', $('adminKey').value.trim()); $('cohortsBtn').click(); };
+  $('newCohort').onsubmit = async e => {
+    e.preventDefault();
+    const adminKey = admin || $('ncKey').value.trim();
+    const r = await fetch('/api/fac', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', name: $('ncName').value, adminKey }) });
+    const j = await r.json();
+    if (!r.ok) { $('ncErr').textContent = j.error; return; }
+    localStorage.setItem('aftershock_admin', adminKey);
+    location.href = `/facilitator.html?c=${j.code}&k=${j.facilitator_key}`;
+  };
+};

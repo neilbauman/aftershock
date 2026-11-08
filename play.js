@@ -36,6 +36,10 @@ const org = () => INSTITUTIONS[S.player.institution];
 
 // ---------------------------------------------------------------- rendering
 function render() {
+  if (!INSTITUTIONS[S.player.institution] || !S.household?.muni) {
+    $('tab-decide').innerHTML = `<div class="card alert"><h2>This cohort uses an older version of Aftershock</h2><p>Ask your facilitator for the new cohort code, then join it from <a href="/?join=1">the start page</a>.</p></div>`;
+    return;
+  }
   const open = isOpen(), inf = info();
   const block = open ? inf.block : null;
   document.body.classList.toggle('mode-family', block === 'family');
