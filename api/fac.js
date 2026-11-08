@@ -1,6 +1,6 @@
 import { rpc, SECRET, load, body, send, push } from '../lib/server.js';
 import { initialWorld, initialHousehold } from '../lib/engine.js';
-import { PROFILE_ORDER, SCENARIO_VERSION } from '../lib/scenario.js';
+import { FAMILY_ORDER as PROFILE_ORDER, SCENARIO_VERSION } from '../lib/chapters.js';
 import * as ops from '../lib/ops.js';
 
 export default async function handler(req, res) {
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       case 'close': out = await ops.closeRound(b.code); break;
       case 'extend': out = await ops.extendRound(b.code, Number(b.minutes) || 10); break;
       case 'remind': out = await ops.remind(b.code, { force: true }); break;
-      case 'broadcast': out = await ops.broadcast(b.code, String(b.text || '').slice(0, 300), b.team || null); break;
+      case 'broadcast': out = await ops.broadcast(b.code, String(b.text || '').slice(0, 300)); break;
       case 'restart': {
         const profiles = Object.fromEntries(PROFILE_ORDER.map(p => [p, initialHousehold(p)]));
         out = await rpc('srv_reset', { p_secret: SECRET, p_code: b.code, p_profiles: profiles, p_world: initialWorld() });

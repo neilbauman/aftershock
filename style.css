@@ -87,3 +87,5 @@ body.mode-response .opt.sel{border-color:#1f4e79;background:#eef4fa}
 .rolecard{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#000a;padding:20px}
 .rolecard .rc{max-width:420px;width:100%;border-radius:18px;padding:28px 22px;color:#fff;box-shadow:0 10px 40px #0006}
 .rolecard .kicker{color:#ffffffc0}
+.story p{font-size:17px;line-height:1.55;margin:0 0 10px}
+.conseq.story{font-size:15px}
