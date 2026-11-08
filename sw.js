@@ -9,8 +9,9 @@ self.addEventListener('notificationclick', e => {
   const url = e.notification.data?.url || '/play.html';
   e.waitUntil((async () => {
     const all = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const same = all.find(c => new URL(c.url).pathname === new URL(url, self.location.origin).pathname);
-    if (same) { await same.focus(); same.postMessage({ type: 'refresh' }); return; }
+    const target = new URL(url, self.location.origin);
+    const win = all.find(c => new URL(c.url).pathname === target.pathname) || all[0];
+    if (win) { await win.focus(); try { await win.navigate(target.href); } catch { win.postMessage({ type: 'refresh' }); } return; }
     return clients.openWindow(url);
   })());
 });

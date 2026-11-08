@@ -8,7 +8,8 @@
 </head><body>
 <header class="top"><div class="row"><div class="brand">AFTERSHOCK<small>A Varenna earthquake simulation</small></div></div></header>
 <main class="wrap">
-  <h1>Join a cohort</h1>
+  <div id="mine" class="hidden"><h1>Your cohorts</h1><div id="mineList"></div><h2 style="margin-top:24px">Join another cohort</h2></div>
+  <h1 id="joinTitle">Join a cohort</h1>
   <p class="muted">For four days you will live through an earthquake response from two sides: as a family trying to recover, and as part of an organisation trying to help. Decisions take 2–3 minutes and arrive as notifications.</p>
   <form id="join" class="card">
     <label for="code">Cohort code</label><input id="code" autocomplete="off" autocapitalize="characters" required maxlength="8" placeholder="e.g. K7QPZ">
@@ -20,19 +21,28 @@
   </form>
   <p class="small muted">Facilitating? <a href="/facilitator.html">Open the facilitator console</a>.</p>
 </main>
-<script>
+<script type="module">
+import { list, upsert } from '/members.js';
 const qs = new URLSearchParams(location.search);
-const t = localStorage.getItem('aftershock_token');
-if (t && !qs.get('c')) location.replace('/play.html?t=' + t);
-if (qs.get('c')) document.getElementById('code').value = qs.get('c').toUpperCase();
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const mine = list();
+const code = (qs.get('c') || '').toUpperCase();
+const existing = code && mine.find(x => (x.code || '').toUpperCase() === code);
+if (existing) location.replace('/play.html?t=' + existing.t);
+if (code) document.getElementById('code').value = code;
+if (mine.length) {
+  document.getElementById('mine').classList.remove('hidden');
+  document.getElementById('joinTitle').classList.add('hidden');
+  document.getElementById('mineList').innerHTML = mine.map(m => `<a class="card" style="display:block;text-decoration:none;color:inherit" href="/play.html?t=${m.t}"><b>${esc(m.cohort || 'Cohort')}</b>${m.code ? ` <span class="muted small">· ${esc(m.code)}</span>` : ''}<br><span class="small muted">${esc(m.family || '')}${m.name ? ' · playing as ' + esc(m.name) : ''}</span></a>`).join('');
+}
 document.getElementById('join').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Joining…';
-  const r = await fetch('/api/join', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: document.getElementById('code').value, name: document.getElementById('name').value, email: document.getElementById('email').value }) });
+  const v = id => document.getElementById(id).value;
+  const r = await fetch('/api/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: v('code'), name: v('name'), email: v('email') }) });
   const j = await r.json().catch(() => ({ error: 'Network error — please try again.' }));
   if (!r.ok) { document.getElementById('err').textContent = j.error; btn.disabled = false; btn.textContent = 'Join'; return; }
-  localStorage.setItem('aftershock_token', j.token);
+  upsert({ t: j.token, code: v('code').trim().toUpperCase(), name: v('name').trim() });
   location.replace('/play.html?t=' + j.token + '&welcome=1');
 });
 </script>

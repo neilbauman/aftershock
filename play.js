@@ -1,11 +1,13 @@
 import { ROUNDS, DIMS, PHASES, INSTITUTIONS, PROFILES, LOCATIONS, householdOptions, institutionBlock, phaseOf } from '/lib/scenario.js';
 import { STORY, DIM_PLAIN, effectChips, institutionHints, previewPhases, mapSvg, md } from '/lib/story.js';
 
+import * as members from '/members.js';
 const cfg = window.AFTERSHOCK;
 const qs = new URLSearchParams(location.search);
-if (qs.get('t')) localStorage.setItem('aftershock_token', qs.get('t'));
-const token = qs.get('t') || localStorage.getItem('aftershock_token');
+const viaCode = qs.get('c') && members.byCode(qs.get('c'));
+const token = qs.get('t') || viaCode?.t || localStorage.getItem('aftershock_token');
 if (!token) location.replace('/');
+if (token) localStorage.setItem('aftershock_token', token);
 // keep the token in the URL so "Add to Home Screen" on iOS carries it into the app
 if (!qs.get('t')) history.replaceState(null, '', '/play.html?t=' + token);
 
@@ -21,14 +23,18 @@ async function rpc(fn, args) {
 }
 
 async function refresh() {
-  try { S = await rpc('player_state', { p_token: token }); render(); }
-  catch (e) { if (/unknown player/.test(e.message)) { localStorage.removeItem('aftershock_token'); location.replace('/'); } }
+  try {
+    S = await rpc('player_state', { p_token: token });
+    members.upsert({ t: token, code: S.cohort.code, cohort: S.cohort.name, name: S.player.name, family: PROFILES[S.player.profile].name });
+    render(); syncPush();
+  } catch (e) { if (/unknown player/.test(e.message)) { members.remove(token); location.replace('/'); } }
 }
 
 // ---------------------------------------------------------------- rendering
 function render() {
   const { cohort, round, household: h, player } = S;
   $('cohortName').textContent = `${cohort.name} · ${PROFILES[player.profile].name}`;
+  $('switchBtn').firstChild.textContent = members.list().length > 1 ? 'AFTERSHOCK ▾' : 'AFTERSHOCK';
   const open = round?.status === 'open';
   const R = ROUNDS.find(r => r.n === round?.number);
   if (open) {
@@ -167,6 +173,14 @@ function showIntro(step = 0) {
 }
 function closeIntro() { localStorage.setItem('aftershock_intro_' + token, '1'); $('intro').classList.add('hidden'); render(); }
 $('helpBtn').onclick = () => S && showIntro(0);
+$('switchBtn').onclick = () => {
+  const ms = members.list();
+  $('switcher').innerHTML = `<div class="wrap"><div class="kicker">Aftershock</div><h1>Your cohorts</h1>` +
+    ms.map(m => `<a class="card" style="display:block;text-decoration:none;color:inherit;${m.t === token ? 'border-color:var(--accent)' : ''}" href="/play.html?t=${m.t}"><b>${esc(m.cohort || 'Cohort')}</b> <span class="small muted">· ${esc(m.code || '')}${m.t === token ? ' · open now' : ''}</span><br><span class="small muted">${esc(m.family || '')}${m.name ? ' · playing as ' + esc(m.name) : ''}</span></a>`).join('') +
+    `<p><a class="btn secondary full" style="text-align:center" href="/?join=1">Join another cohort</a></p></div><div class="bar2"><div class="row"><button id="swClose">Close</button></div></div>`;
+  $('switcher').classList.remove('hidden');
+  $('swClose').onclick = () => $('switcher').classList.add('hidden');
+};
 
 // ---------------------------------------------------------------- notifications setup
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -189,12 +203,23 @@ async function renderSetup() {
   $('pushBtn').onclick = enablePush;
 }
 
+// Register this device's existing push subscription for the cohort being viewed.
+async function syncPush() {
+  try {
+    if (!swReg || Notification.permission !== 'granted') return;
+    const sub = await swReg.pushManager.getSubscription();
+    if (!sub || localStorage.getItem('aftershock_push_' + token) === sub.endpoint) return;
+    await rpc('save_push', { p_token: token, p_sub: sub.toJSON() });
+    localStorage.setItem('aftershock_push_' + token, sub.endpoint);
+  } catch {}
+}
+
 async function enablePush() {
   try {
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') return renderSetup();
     const sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(cfg.vapidPublic) });
-    await rpc('save_push', { p_token: token, p_sub: sub.toJSON() });
+    for (const m of members.list()) { await rpc('save_push', { p_token: m.t, p_sub: sub.toJSON() }).catch(() => {}); localStorage.setItem('aftershock_push_' + m.t, sub.endpoint); }
     const r = await fetch('/api/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }).then(r => r.json());
     $('setup').innerHTML = r.sent ? '<p class="small">✓ Notifications are on. You should have received a test notification.</p>' : '<p class="small">Notifications are on, but the test did not arrive. Tell your facilitator.</p>';
     $('setup').className = 'card ok';
