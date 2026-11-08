@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aftershock</title>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="theme-color" content="#1d2327"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="stylesheet" href="/style.css">
+<script src="/api/config"></script>
+</head><body>
+<header class="top"><div class="row"><div class="brand">AFTERSHOCK<small id="cohortName">&nbsp;</small></div><span id="roundChip" class="chip">…</span></div></header>
+<main class="wrap">
+  <div id="setup" class="card alert hidden"></div>
+  <section id="tab-decide"></section>
+  <section id="tab-family" class="hidden"></section>
+  <section id="tab-team" class="hidden"></section>
+  <section id="tab-news" class="hidden"></section>
+</main>
+<nav class="tabs">
+  <button data-tab="decide" class="on">Decide<span id="decideDot" class="dot hidden"></span></button>
+  <button data-tab="family">Family</button>
+  <button data-tab="team">Team</button>
+  <button data-tab="news">News</button>
+</nav>
+<script type="module" src="/play.js"></script>
+</body></html>

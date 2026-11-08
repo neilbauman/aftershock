@@ -1,0 +1,2 @@
+-- Applied 2026-11-08: tables (app_secret, cohorts, players, households, world, rounds, decisions, feed, push_subs), all with RLS enabled and no policies.
+-- Access is only through the SECURITY DEFINER functions in 002.

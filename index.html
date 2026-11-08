@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aftershock</title>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="theme-color" content="#1d2327"><meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="/style.css">
+</head><body>
+<header class="top"><div class="row"><div class="brand">AFTERSHOCK<small>A Varenna earthquake simulation</small></div></div></header>
+<main class="wrap">
+  <h1>Join a cohort</h1>
+  <p class="muted">For four days you will live through an earthquake response from two sides: as a family trying to recover, and as part of an organisation trying to help. Decisions take 2–3 minutes and arrive as notifications.</p>
+  <form id="join" class="card">
+    <label for="code">Cohort code</label><input id="code" autocomplete="off" autocapitalize="characters" required maxlength="8" placeholder="e.g. K7QPZ">
+    <label for="name">Your name</label><input id="name" required maxlength="40" placeholder="As colleagues know you">
+    <label for="email">Email (optional, for reminders)</label><input id="email" type="email" placeholder="you@example.org">
+    <p class="small muted">We log your in-game decisions for the debrief and for comparing cohorts. Exports use your name only inside your cohort.</p>
+    <button class="full" type="submit">Join</button>
+    <p id="err" class="small" style="color:var(--accent)"></p>
+  </form>
+  <p class="small muted">Facilitating? <a href="/facilitator.html">Open the facilitator console</a>.</p>
+</main>
+<script>
+const qs = new URLSearchParams(location.search);
+const t = localStorage.getItem('aftershock_token');
+if (t && !qs.get('c')) location.replace('/play.html?t=' + t);
+if (qs.get('c')) document.getElementById('code').value = qs.get('c').toUpperCase();
+document.getElementById('join').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Joining…';
+  const r = await fetch('/api/join', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: code.value, name: name.value, email: email.value }) });
+  const j = await r.json();
+  if (!r.ok) { document.getElementById('err').textContent = j.error; btn.disabled = false; btn.textContent = 'Join'; return; }
+  localStorage.setItem('aftershock_token', j.token);
+  location.replace('/play.html?t=' + j.token + '&welcome=1');
+});
+</script>
+</body></html>

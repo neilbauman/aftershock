@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aftershock · Facilitator</title>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="theme-color" content="#1d2327"><meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="/style.css">
+<script src="/api/config"></script>
+</head><body>
+<header class="top wide"><div class="row"><div class="brand">AFTERSHOCK · FACILITATOR<small id="cname">&nbsp;</small></div><span id="chip" class="chip">…</span></div></header>
+<main class="wrap wide">
+  <section id="login" class="hidden">
+    <div class="grid2">
+      <form id="loginForm" class="card"><h2>Open a cohort</h2>
+        <label>Cohort code</label><input id="lcode" autocapitalize="characters" required>
+        <label>Facilitator key</label><input id="lkey" required>
+        <p><button class="full">Open console</button></p></form>
+      <form id="createForm" class="card"><h2>Create a new cohort</h2>
+        <label>Cohort name</label><input id="cnameIn" required placeholder="e.g. Pilot test 1">
+        <label>Admin key</label><input id="ckey" required>
+        <p><button class="full">Create cohort</button></p><p id="cerr" class="small"></p></form>
+    </div>
+  </section>
+  <section id="console" class="hidden">
+    <div class="grid3">
+      <div>
+        <div class="card"><div class="kicker">Round control</div><h2 id="rtitle">…</h2><p id="rsub" class="muted"></p>
+          <div class="btnrow" id="rbtns"></div><p id="rmsg" class="small muted"></p></div>
+        <div class="card"><div class="kicker">Players and decisions</div><div style="overflow-x:auto"><table id="ptable"></table></div></div>
+        <div class="card"><div class="kicker">Living Conditions Index · households</div>
+          <p class="small muted">Dimension phases per household. LCI worst, mean, and number of dimensions at Phase 4+. “Known” = on a responder’s list.</p>
+          <div style="overflow-x:auto"><table id="htable"></table></div></div>
+        <div class="grid2">
+          <div class="card"><div class="kicker">By population group (20% rule)</div><table id="gtable"></table></div>
+          <div class="card"><div class="kicker">By location / pocket (20% rule)</div><table id="ltable"></table></div>
+        </div>
+        <div class="card"><div class="kicker">Last round results</div><div id="results" class="small"></div></div>
+      </div>
+      <div>
+        <div class="card"><div class="kicker">Alerts</div><div id="alerts"></div>
+          <p><button id="facPush" class="secondary full">Get facilitator alerts on this device</button></p></div>
+        <div class="card"><div class="kicker">Invite players</div><p class="small">Share this link or QR code:</p>
+          <p><a id="joinLink" target="_blank"></a></p><img id="qr" alt="QR code to join" width="180" height="180"></div>
+        <div class="card"><div class="kicker">Broadcast</div>
+          <textarea id="btext" rows="3" placeholder="e.g. Coordination meeting at lunch — bring your 3W"></textarea>
+          <label>To</label><select id="bteam"><option value="">Everyone</option></select>
+          <p><button id="bsend" class="full">Send</button></p></div>
+        <div class="card"><div class="kicker">World</div><div id="world" class="small"></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script type="module" src="/facilitator.js"></script>
+</body></html>
