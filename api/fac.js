@@ -1,5 +1,6 @@
 import { rpc, SECRET, load, body, send, push } from '../lib/server.js';
-import { initialWorld } from '../lib/engine.js';
+import { initialWorld, initialHousehold } from '../lib/engine.js';
+import { PROFILE_ORDER } from '../lib/scenario.js';
 import * as ops from '../lib/ops.js';
 
 export default async function handler(req, res) {
@@ -21,6 +22,13 @@ export default async function handler(req, res) {
       case 'extend': out = await ops.extendRound(b.code, Number(b.minutes) || 10); break;
       case 'remind': out = await ops.remind(b.code, { force: true }); break;
       case 'broadcast': out = await ops.broadcast(b.code, String(b.text || '').slice(0, 300), b.team || null); break;
+      case 'restart': {
+        const profiles = Object.fromEntries(PROFILE_ORDER.map(p => [p, initialHousehold(p)]));
+        out = await rpc('srv_reset', { p_secret: SECRET, p_code: b.code, p_profiles: profiles, p_world: initialWorld() });
+        const data = await load(b.code);
+        await push(data.subs.filter(s => !s.is_facilitator), { title: `${data.cohort.name} · Restarted`, body: 'The facilitator has restarted the game. Your family is back at the beginning.', url: `/play.html?c=${b.code}` });
+        break;
+      }
       case 'takeover': out = await ops.takeover(b.code, b.playerId, b.kind, b.optionId); break;
       case 'testpush': {
         const data = await load(b.code);

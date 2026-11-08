@@ -55,6 +55,7 @@ function render() {
   $('rbtns').innerHTML = open
     ? `<button data-a="close">Close and resolve now</button><button class="secondary" data-a="extend">+10 min</button><button class="secondary" data-a="remind">Nudge non-responders</button>`
     : nextR ? `<label style="margin:0">Open for</label><input id="mins" type="number" value="45" min="2" max="600"> <span class="small">min</span><button data-a="open">Open Round ${nextR.n}</button>` : '';
+  if (c.current_round > 0 && !open) $('rbtns').innerHTML += `<button class="secondary" data-a="restart">Restart cohort</button>`;
   $('rbtns').querySelectorAll('button').forEach(b => b.onclick = () => act(b.dataset.a));
 
   // players
@@ -112,12 +113,14 @@ const hLabel = (R, id) => id === 'wait' ? 'Wait and see' : R.household.options.f
 const ago = t => { const m = Math.round((Date.now() - new Date(t)) / 60000); return m < 1 ? 'now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
 
 async function act(a) {
+  if (a === 'restart' && !confirm('Restart this cohort? All rounds, decisions and news are cleared and every family goes back to the start. Players stay joined.')) return;
   busy = true; $('rmsg').textContent = 'Working…';
   try {
     const out = await api(a, { minutes: a === 'open' ? Number($('mins').value) : 10 });
     $('rmsg').textContent = a === 'open' ? `Round ${out.opened} opened. ${out.pushed} notifications sent.`
       : a === 'close' ? `Round ${out.resolved} resolved. ${out.pushed} notifications sent.`
-      : a === 'remind' ? `${out.reminded} reminders sent (${out.missing} players outstanding).` : 'Done.';
+      : a === 'remind' ? `${out.reminded} reminders sent (${out.missing} players outstanding).`
+      : a === 'restart' ? `Cohort restarted. ${out.players} players kept; everyone is back at the beginning.` : 'Done.';
     D = await api('state'); render();
   } catch (e) { $('rmsg').textContent = e.message; }
   busy = false;
