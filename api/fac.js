@@ -13,6 +13,10 @@ export default async function handler(req, res) {
       await rpc('srv_set_scenario', { p_secret: SECRET, p_code: out.code, p_version: SCENARIO_VERSION });
       return send(res, 200, out);
     }
+    if (b.action === 'delete') {
+      if (b.adminKey !== process.env.ADMIN_KEY) return send(res, 403, { error: 'Wrong admin key.' });
+      return send(res, 200, await rpc('srv_delete_cohort', { p_secret: SECRET, p_code: String(b.code || '') }));
+    }
     if (b.action === 'list') {
       if (b.adminKey !== process.env.ADMIN_KEY) return send(res, 403, { error: 'Wrong admin key.' });
       return send(res, 200, await rpc('srv_list_cohorts', { p_secret: SECRET }));

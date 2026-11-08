@@ -168,9 +168,10 @@ $('cohortsBtn').onclick = async () => {
   const admin = localStorage.getItem('aftershock_admin');
   let all = null;
   if (admin) { try { const r = await fetch('/api/fac', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list', adminKey: admin }) }); if (r.ok) all = await r.json(); } catch {} }
-  const rows = (all || known).map(c => `<a class="card" style="display:block;text-decoration:none;color:inherit;${c.code === code ? 'border-color:var(--accent)' : ''}" href="/facilitator.html?c=${c.code}&k=${c.key}">
+  const rows = (all || known).map(c => `<div class="card" style="${c.code === code ? 'border-color:var(--accent)' : ''}"><a style="display:block;text-decoration:none;color:inherit" href="/facilitator.html?c=${c.code}&k=${c.key}">
       <b>${esc(c.name)}</b> <span class="small muted">· ${c.code}${c.code === code ? ' · open now' : ''}</span>
-      ${all ? `<br><span class="small muted">${c.players} players · ${c.current_round ? `Act ${Math.ceil(c.current_round / 2)} ${c.current_round % 2 ? 'family' : 'response'}` : 'not started'} · ${c.scenario} · created ${new Date(c.created_at).toLocaleDateString()}</span>` : ''}</a>`).join('');
+      ${all ? `<br><span class="small muted">${c.players} players · ${c.current_round ? `Act ${Math.ceil(c.current_round / 2)} ${c.current_round % 2 ? 'family' : 'response'}` : 'not started'} · ${c.scenario} · created ${new Date(c.created_at).toLocaleDateString()}</span>` : ''}</a>
+      ${all ? `<button class="secondary small" data-del="${c.code}" data-name="${esc(c.name)}" style="margin-top:8px;padding:6px 10px">Delete</button>` : ''}</div>`).join('');
   $('cohorts').innerHTML = `<div class="wrap"><div class="kicker">Facilitator</div><h1>Cohorts</h1>
     ${rows || '<p class="muted">No cohorts opened on this device yet.</p>'}
     ${all ? '' : `<form id="adminForm" class="card"><label>Admin key (to list every cohort)</label><input id="adminKey"><p><button class="full secondary">Show all cohorts</button></p></form>`}
@@ -179,6 +180,16 @@ $('cohortsBtn').onclick = async () => {
     <div class="bar2"><div class="row"><button id="cClose">Close</button></div></div>`;
   $('cohorts').classList.remove('hidden');
   $('cClose').onclick = () => $('cohorts').classList.add('hidden');
+  $('cohorts').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const c = b.dataset.del;
+    if (!confirm(`Delete "${b.dataset.name}" (${c})? All its players, decisions and results are permanently removed. This cannot be undone.`)) return;
+    const r = await fetch('/api/fac', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', adminKey: admin, code: c }) });
+    if (!r.ok) return alert((await r.json()).error);
+    const left = JSON.parse(localStorage.getItem('aftershock_fac_cohorts') || '[]').filter(x => x.code !== c);
+    localStorage.setItem('aftershock_fac_cohorts', JSON.stringify(left));
+    if (c === code) { location.href = '/facilitator.html'; return; }
+    $('cohortsBtn').click();
+  });
   if ($('adminForm')) $('adminForm').onsubmit = e => { e.preventDefault(); localStorage.setItem('aftershock_admin', $('adminKey').value.trim()); $('cohortsBtn').click(); };
   $('newCohort').onsubmit = async e => {
     e.preventDefault();
