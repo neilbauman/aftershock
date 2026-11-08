@@ -29,8 +29,8 @@ document.getElementById('join').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Joining…';
   const r = await fetch('/api/join', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: code.value, name: name.value, email: email.value }) });
-  const j = await r.json();
+    body: JSON.stringify({ code: document.getElementById('code').value, name: document.getElementById('name').value, email: document.getElementById('email').value }) });
+  const j = await r.json().catch(() => ({ error: 'Network error — please try again.' }));
   if (!r.ok) { document.getElementById('err').textContent = j.error; btn.disabled = false; btn.textContent = 'Join'; return; }
   localStorage.setItem('aftershock_token', j.token);
   location.replace('/play.html?t=' + j.token + '&welcome=1');
