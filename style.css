@@ -75,3 +75,15 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .conseq{border-left:4px solid var(--accent);background:#fff;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:14px}
 .legend{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:8px 0;text-align:center;font-size:11px}
 .legend span{border-radius:6px;padding:6px 2px}
+
+body.mode-family header.top{background:#8a3b12}
+body.mode-response header.top{background:#1f4e79}
+.role{border-radius:14px;padding:14px 16px;color:#fff;margin:12px 0}
+.role h2{margin:2px 0 4px;font-size:20px}.role .kicker{color:#ffffffc0}
+.role-family{background:#8a3b12}.role-response{background:#1f4e79}
+.card.current{border:2px solid var(--ink)}.card.done{opacity:.92}
+body.mode-family .card.current{border-color:#8a3b12}body.mode-response .card.current{border-color:#1f4e79}
+body.mode-response .opt.sel{border-color:#1f4e79;background:#eef4fa}
+.rolecard{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#000a;padding:20px}
+.rolecard .rc{max-width:420px;width:100%;border-radius:18px;padding:28px 22px;color:#fff;box-shadow:0 10px 40px #0006}
+.rolecard .kicker{color:#ffffffc0}
