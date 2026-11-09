@@ -10,10 +10,12 @@
 <main class="wrap">
   <div id="mine" class="hidden"><h1>Your cohorts</h1><div id="mineList"></div><h2 style="margin-top:24px">Join another cohort</h2></div>
   <h1 id="joinTitle">Join a cohort</h1>
-  <p class="muted">For four days you will live through an earthquake response from two sides: as a family trying to recover, and as part of an organisation trying to help. Decisions take 2–3 minutes and arrive as notifications.</p>
+  <p class="muted">You will live through the first year after an earthquake as one family, chapter by chapter. Each chapter takes about five minutes.</p>
   <form id="join" class="card">
     <label for="code">Cohort code</label><input id="code" autocomplete="off" autocapitalize="characters" required maxlength="8" placeholder="e.g. K7QPZ">
     <label for="name">Your name</label><input id="name" required maxlength="40" placeholder="As colleagues know you">
+    <label>Your family</label>
+    <div id="fams" class="fams"></div>
     <label for="email">Email (optional, for reminders)</label><input id="email" type="email" placeholder="you@example.org">
     <p class="small muted">We log your in-game decisions for the debrief and for comparing cohorts. Exports use your name only inside your cohort.</p>
     <button class="full" type="submit">Join</button>
@@ -23,6 +25,8 @@
 </main>
 <script type="module">
 import { list, upsert } from '/members.js';
+import { FAMILIES, FAMILY_ORDER } from '/lib/chapters.js';
+const LENS = { haddad: 'Renting · hosting · collective centres', okafor: 'Informal settlement · land and tenure · eviction', amira: 'Disability · access · a single parent', mendes: 'Rural livelihoods · animals · a remote village', petrov: 'An older person alone · staying in a damaged home' };
 const qs = new URLSearchParams(location.search);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const mine = list();
@@ -30,6 +34,8 @@ const code = (qs.get('c') || '').toUpperCase();
 const existing = code && mine.find(x => (x.code || '').toUpperCase() === code);
 if (existing) location.replace('/play.html?t=' + existing.t);
 if (code) document.getElementById('code').value = code;
+document.getElementById('fams').innerHTML = `<label class="fam"><input type="radio" name="family" value="" checked><span><b>Assign me a family</b><small>Spreads families evenly across the cohort</small></span></label>` +
+  FAMILY_ORDER.map(k => `<label class="fam"><input type="radio" name="family" value="${k}"><span><b>${esc(FAMILIES[k].name)}</b><small>${esc(FAMILIES[k].who)}</small><em>${esc(LENS[k])}</em></span></label>`).join('');
 if (mine.length) {
   document.getElementById('mine').classList.remove('hidden');
   document.getElementById('joinTitle').classList.add('hidden');
@@ -39,7 +45,7 @@ document.getElementById('join').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Joining…';
   const v = id => document.getElementById(id).value;
-  const r = await fetch('/api/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: v('code'), name: v('name'), email: v('email') }) });
+  const r = await fetch('/api/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: v('code'), name: v('name'), email: v('email'), family: document.querySelector('input[name=family]:checked')?.value || '' }) });
   const j = await r.json().catch(() => ({ error: 'Network error — please try again.' }));
   if (!r.ok) { document.getElementById('err').textContent = j.error; btn.disabled = false; btn.textContent = 'Join'; return; }
   upsert({ t: j.token, code: v('code').trim().toUpperCase(), name: v('name').trim() });

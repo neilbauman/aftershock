@@ -95,3 +95,11 @@ body.mode-response .opt.sel{border-color:#1f4e79;background:#eef4fa}
 .community .bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:8px 0 2px}
 .community .bar span{display:block;height:100%}
 .community .bar .ph1{background:var(--p1)}.community .bar .ph2{background:var(--p2)}.community .bar .ph3{background:var(--p3)}.community .bar .ph4{background:var(--p4)}.community .bar .ph5{background:var(--p5)}
+
+.fams{display:flex;flex-direction:column;gap:8px;margin:4px 0 14px}
+.fam{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line,#ddd);border-radius:12px;padding:10px 12px;margin:0;cursor:pointer;font-weight:normal}
+.fam input{width:auto;margin:3px 0 0;flex:none}
+.fam span{display:flex;flex-direction:column;gap:2px}
+.fam small{color:var(--muted,#667);font-size:13px;line-height:1.35}
+.fam em{font-style:normal;font-size:12px;color:var(--accent,#b33);font-weight:600}
+.fam:has(input:checked){border-color:var(--accent,#b33);background:rgba(208,49,45,.05)}
