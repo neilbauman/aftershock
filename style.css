@@ -90,3 +90,8 @@ body.mode-response .opt.sel{border-color:#1f4e79;background:#eef4fa}
 .story p{font-size:17px;line-height:1.55;margin:0 0 10px}
 .conseq.story{font-size:15px}
 .valley{background:#f3f0e8;border-color:#e2dccd}.valley p{font-size:15px}
+
+.community .cmp{display:flex;gap:18px;margin:6px 0}
+.community .bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:8px 0 2px}
+.community .bar span{display:block;height:100%}
+.community .bar .ph1{background:var(--p1)}.community .bar .ph2{background:var(--p2)}.community .bar .ph3{background:var(--p3)}.community .bar .ph4{background:var(--p4)}.community .bar .ph5{background:var(--p5)}

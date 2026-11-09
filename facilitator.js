@@ -90,6 +90,8 @@ function render() {
     const label = key => { const [f, st, id] = key.split(':'); const step = C.steps.find(x => x.id === st); return `${PROFILES[f]?.short}: ${id === 'wait' ? 'Wait and see' : step?.options.find(o => o.id === id)?.label || id}`; };
     $('results').innerHTML = `<p><b>Chapter ${last.chapter} · ${esc(C.title)}</b> · ${last.defaults} decisions defaulted · ${last.known} families on an aid list</p>
       <p><b>Who reached families:</b> ${Object.entries(last.actors).map(([k, v]) => `${esc(k)} ${v}`).join(' · ') || 'nobody'}</p>
+      <p><b>Families with someone injured this chapter:</b> ${last.injuries || 0}</p>
+      ${last.community ? `<p><b>Communities (20% rule, background population + your families):</b> ${Object.entries(last.community).map(([m, c]) => `${esc(m[0].toUpperCase() + m.slice(1))} <span class="ph ph${c.phase20}">${c.phase20}</span> ${c.p45}% in 4–5`).join(' · ')}</p>` : ''}
       <p>${Object.entries(last.choices).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => `${esc(label(k))} (${v})`).join('<br>')}</p>`;
   } else $('results').innerHTML = '<p class="muted">No chapter closed yet.</p>';
 

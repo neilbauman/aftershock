@@ -66,7 +66,22 @@ function situation(h, prevHist, title = 'Your situation') {
   return `<div class="card"><div class="kicker">${title}</div>
     <p style="margin:6px 0"><b>Where you are:</b> ${esc(LOCATIONS[h.loc] || h.loc)}, ${esc(MUNIS[h.muni]?.name || '')} <span class="small muted">· ${esc(STYPES[stypeOf(h)]?.label || '')}</span></p>
     <div class="res" style="margin-bottom:8px"><div>Cash<b>${Math.round(h.res.cash)}</b></div><div>Debt<b>${Math.round(h.res.debt || 0)}</b></div>
-    <div>${S.player.profile === 'mendes' ? 'Animals' : 'Tools &amp; stock'}<b>${Math.round(h.res.assets)}</b></div><div>On an aid list<b>${h.known ? 'Yes' : 'No'}</b></div></div>${rows}</div>`;
+    <div>${S.player.profile === 'mendes' ? 'Animals' : 'Tools &amp; stock'}<b>${Math.round(h.res.assets)}</b></div><div>On an aid list<b>${h.known ? 'Yes' : 'No'}</b></div></div>${rows}${communityBox(h, prevHist)}</div>`;
+}
+
+function communityBox(h, prevHist) {
+  if (!prevHist) return '';
+  const m = h.loc === 'away' ? (h.homeMuni || h.muni) : h.muni, c = S.world?.public?.community?.[m];
+  if (!c) return '';
+  const mine = (h.lci || {}).worst || 1, area = c.phase20;
+  const cmp = mine > area ? `Your family is worse off than ${esc(MUNIS[m]?.name)} as a whole. An area classified phase ${area} can hide households like yours: on an area map, you are invisible unless someone looks for pockets of concern.`
+    : mine < area ? `Your family is better off than many around you. Programmes targeted at the worst-off areas may include you — or may rightly pass you by for neighbours in greater need.`
+    : `Your family’s situation is typical of ${esc(MUNIS[m]?.name)} right now.`;
+  return `<div class="community"><div class="kicker" style="margin-top:12px">Your family and your community</div>
+    <div class="cmp"><div><span class="small muted">Your family</span><br><span class="ph ph${mine}">${mine}</span> <b>${esc(PHASES[mine - 1])}</b></div>
+    <div><span class="small muted">${esc(MUNIS[m]?.name)} (20% rule)</span><br><span class="ph ph${area}">${area}</span> <b>${esc(PHASES[area - 1])}</b></div></div>
+    <div class="bar">${c.dist.map((n, i) => n ? `<span class="ph${i + 1}" style="flex:${n}"></span>` : '').join('')}</div>
+    <p class="small muted" style="margin:4px 0 0">${c.p45}% of households in ${esc(MUNIS[m]?.name)} are in phase 4 or 5. ${cmp}</p></div>`;
 }
 
 function renderStory() {
@@ -94,7 +109,7 @@ function renderStory() {
     if (st.chosen && editing !== st.id) {
       const ch2 = previewPhases(st.before, st.chosen).map(c => `${DIMS[c.k].short} <span class="ph ph${c.before}">${c.before}</span>→<span class="ph ph${c.after}">${c.after}</span>`).join(' · ');
       html += `<div class="card done"><div class="kicker">${label} ✓</div><div class="small muted">${esc(st.prompt)}</div><p style="margin:6px 0"><b>${esc(st.chosen.label)}</b></p>
-        <div class="conseq story">${md(st.chosen.after || '')}${ch2 ? `<div class="small" style="margin-top:8px">${ch2}</div>` : ''}</div>
+        <div class="conseq story">${md(st.chosen.after || '')}${(st.notes || []).map(t => `<p>${md(t)}</p>`).join('')}${ch2 ? `<div class="small" style="margin-top:8px">${ch2}</div>` : ''}</div>
         <button class="secondary small" data-edit="${st.id}" style="margin-top:8px;padding:6px 10px">Change</button></div>`;
       return;
     }
