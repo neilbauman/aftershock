@@ -56,14 +56,14 @@ function render() {
   maybeChapterCard();
 }
 
-function situation(h, prevHist) {
+function situation(h, prevHist, title = 'Your situation') {
   const prev = prevHist?.dims;
   const rows = Object.entries(DIMS).map(([k, d]) => {
     const p = phaseOf(h.dims[k]), was = prev ? phaseOf(prev[k]) : p;
     const arrow = p > was ? ' <span style="color:var(--p5)">▲ worse</span>' : p < was ? ' <span style="color:var(--p1)">▼ better</span>' : '';
     return `<div class="dim"><div class="head"><span><b>${d.short}</b> <span class="small muted">${esc(d.text[p - 1])}</span>${arrow}</span><span class="ph ph${p}">${p}</span></div></div>`;
   }).join('');
-  return `<div class="card"><div class="kicker">Your situation</div>
+  return `<div class="card"><div class="kicker">${title}</div>
     <p style="margin:6px 0"><b>Where you are:</b> ${esc(LOCATIONS[h.loc] || h.loc)}, ${esc(MUNIS[h.muni]?.name || '')}</p>
     <div class="res" style="margin-bottom:8px"><div>Cash<b>${Math.round(h.res.cash)}</b></div><div>Debt<b>${Math.round(h.res.debt || 0)}</b></div>
     <div>${S.player.profile === 'mendes' ? 'Animals' : 'Tools &amp; stock'}<b>${Math.round(h.res.assets)}</b></div><div>On an aid list<b>${h.known ? 'Yes' : 'No'}</b></div></div>${rows}</div>`;
@@ -86,7 +86,7 @@ function renderStory() {
   if (ch.n > 1 && h.pending?.length) html += `<div class="card"><div class="kicker">Since last time</div>${paras(h.pending)}</div>`;
   if (ch.valley?.length) html += `<div class="card valley"><div class="kicker">Meanwhile in the valley</div>${paras(ch.valley)}</div>`;
   html += `<div class="card story">${paras(texts(ch.scene[S.player.profile], h, S.player.profile))}</div>`;
-  html += situation(h, (h.history || []).at(-2));
+  html += ch.n === 1 ? situation(h, null, 'Before the earthquake') : situation(h, (h.history || []).at(-2));
   let shown = false;
   steps.forEach((st, i) => {
     const label = `Decision ${i + 1} of ${steps.length}`;
@@ -118,12 +118,12 @@ function renderFamily() {
       <div class="bar">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= p ? 'on' + p : ''}"></i>`).join('')}</div>
       <div class="small muted">${PHASES[p - 1]} — ${esc(d.text[p - 1])}</div><div class="small" style="color:#8a949a">${DIM_PLAIN[k]}</div></div>`;
   }).join('');
-  const hist = (h.history || []).map(x => `<span class="ph ph${x.lci.worst}" title="Chapter ${x.ch}">${x.lci.worst}</span>`).join(' ');
+  const hist = (h.history || []).map(x => `<span class="ph ph${x.lci.worst}" title="${x.ch ? 'Chapter ' + x.ch : 'Before the earthquake'}">${x.lci.worst}</span>`).join(' ');
   $('tab-family').innerHTML = `
     <div class="role role-family"><div class="kicker">Your family</div><h2>${esc(F.name)}</h2><div class="small">${esc(F.who)}</div></div>
     <div class="card"><p>${esc(F.people)}</p><p><b>Now:</b> ${esc(LOCATIONS[h.loc] || h.loc)} · ${esc(MUNIS[h.muni]?.name || '')}</p>${mapSvg(h, S.player.profile)}</div>
     <div class="card"><h2>Living conditions</h2><p class="small muted">Phases 1–5, as in the Living Conditions Index.</p>${dims}
-      ${hist ? `<p class="small muted" style="margin-top:12px">Most severe phase, chapter by chapter: ${hist}</p>` : ''}</div>`;
+      ${hist ? `<p class="small muted" style="margin-top:12px">Most severe phase, from before the earthquake onwards: ${hist}</p>` : ''}</div>`;
 }
 
 function renderYear() {
