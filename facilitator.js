@@ -52,6 +52,8 @@ function render() {
   const open = r?.status === 'open';
   const cur = chapterOf(c.current_round), nx = chapterOf(c.current_round + 1);
   const humans = D.players.filter(p => !p.npc);
+  const self = D.world?.public?.mode === 'self';
+  const reached = p => (D.households[p.id]?.story?.length || 0);
   $('cname').textContent = `${c.name} · code ${c.code} · ${humans.length} players`;
   const mins = open ? Math.round((new Date(r.closes_at) - Date.now()) / 60000) : null;
   $('chip').textContent = open ? `Chapter ${cur.n} open · ${mins} min` : c.current_round ? `Chapter ${cur.n} closed` : 'Lobby';
@@ -63,10 +65,18 @@ function render() {
     ? `<button data-a="close">Close chapter now</button><button class="secondary" data-a="extend">+10 min</button><button class="secondary" data-a="remind">Nudge</button>`
     : nx ? `<label style="margin:0">Open for</label><input id="mins" type="number" value="40" min="2" max="600"> <span class="small">min</span><button data-a="open">Open chapter ${nx.n}</button>` : '';
   if (c.current_round > 0 && !open) $('rbtns').innerHTML += `<button class="secondary" data-a="restart">Restart cohort</button>`;
+  if (!open) $('rbtns').innerHTML += `<button class="secondary" data-a="mode-self">Switch to self-paced</button>`;
+  if (self) {
+    const fin = humans.filter(p => reached(p) >= CHAPTERS.length).length, far = Math.max(0, ...humans.map(reached));
+    $('chip').textContent = 'Self-paced'; $('chip').className = 'chip live';
+    $('rtitle').textContent = 'Players move through the chapters at their own pace';
+    $('rsub').textContent = `${fin} of ${humans.length} have finished the year · furthest: chapter ${far} of ${CHAPTERS.length}`;
+    $('rbtns').innerHTML = `<button class="secondary" data-a="restart">Restart cohort</button><button class="secondary" data-a="mode-live">Switch to facilitated chapters</button>`;
+  }
   $('rbtns').querySelectorAll('button').forEach(b => b.onclick = () => act(b.dataset.a));
 
-  $('ptable').innerHTML = `<tr><th>Player</th><th>Family</th><th>${open ? 'This chapter' : ''}</th><th>Last seen</th></tr>` +
-    humans.map(p => { const rp = resp.find(x => x.id === p.id) || {}; return `<tr><td>${esc(p.name)}</td><td>${esc(PROFILES[p.profile]?.name || p.profile)}</td><td>${open ? (rp.complete ? '<span class="tick">✓ done</span>' : `<span class="cross">${rp.done}/${rp.needed}</span>`) : ''}</td><td class="small muted">${ago(p.last_seen)}</td></tr>`; }).join('');
+  $('ptable').innerHTML = `<tr><th>Player</th><th>Family</th><th>${self ? 'Progress' : open ? 'This chapter' : ''}</th><th>Last seen</th></tr>` +
+    humans.map(p => { const rp = resp.find(x => x.id === p.id) || {}; return `<tr><td>${esc(p.name)}</td><td>${esc(PROFILES[p.profile]?.name || p.profile)}</td><td>${self ? (reached(p) >= CHAPTERS.length ? '<span class="tick">✓ year complete</span>' : `Chapter ${reached(p) + 1} of ${CHAPTERS.length}`) : open ? (rp.complete ? '<span class="tick">✓ done</span>' : `<span class="cross">${rp.done}/${rp.needed}</span>`) : ''}</td><td class="small muted">${ago(p.last_seen)}</td></tr>`; }).join('');
 
   const dimKeys = Object.keys(DIMS);
   $('htable').innerHTML = `<tr><th>Family</th><th>Player</th><th>Where</th>${dimKeys.map(k => `<th>${DIMS[k].short}</th>`).join('')}<th>Worst</th><th>Mean</th><th>#4+</th><th>Listed</th><th>Cash</th></tr>` +
@@ -109,10 +119,11 @@ async function act(a) {
   if (a === 'restart' && !confirm('Restart this cohort? All rounds, decisions and news are cleared and every family goes back to the start. Players stay joined.')) return;
   busy = true; $('rmsg').textContent = 'Working…';
   try {
-    const out = await api(a, { minutes: a === 'open' ? Number($('mins').value) : 10 });
+    const out = a.startsWith('mode-') ? await api('mode', { mode: a.slice(5) }) : await api(a, { minutes: a === 'open' ? Number($('mins').value) : 10 });
     $('rmsg').textContent = a === 'open' ? `Act ${out.act} ${out.block} block opened. ${out.pushed} notifications sent.`
       : a === 'close' ? `Block resolved. ${out.pushed} notifications sent.`
       : a === 'remind' ? `${out.reminded} reminders sent (${out.missing} players outstanding).`
+      : a.startsWith('mode-') ? (a === 'mode-self' ? 'Self-paced: players can now move through the chapters on their own.' : 'Facilitated: you open and close each chapter.')
       : a === 'restart' ? `Cohort restarted. ${out.players} players kept; everyone is back at the beginning.` : 'Done.';
     D = await api('state'); render();
   } catch (e) { $('rmsg').textContent = e.message; }

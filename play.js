@@ -31,7 +31,11 @@ async function refresh() {
 }
 
 const fam = () => FAMILIES[S.player.profile];
-const isOpen = () => S.round?.status === 'open';
+const selfPaced = () => S.world?.public?.mode === 'self';
+const curN = () => selfPaced() ? (S.household?.story?.length || 0) + 1 : S.round?.number;
+const isOpen = () => selfPaced() ? !!chapterOf(curN()) : S.round?.status === 'open';
+const picksKey = () => `aftershock_picks_${token}_${curN()}`;
+const myPicks = () => { if (!selfPaced()) return S.my_decisions; try { return JSON.parse(localStorage.getItem(picksKey()) || '{}'); } catch { return {}; } };
 
 // ---------------------------------------------------------------- rendering
 function render() {
@@ -43,12 +47,14 @@ function render() {
   $('cohortName').textContent = `${S.cohort.name} · ${fam().name}`;
   $('switchBtn').firstChild.textContent = members.list().length > 1 ? 'AFTERSHOCK ▾' : 'AFTERSHOCK';
   const open = isOpen();
-  if (open) {
+  if (open && selfPaced()) { $('roundChip').textContent = `Chapter ${curN()} of ${CHAPTERS.length}`; $('roundChip').className = 'chip live'; }
+  else if (selfPaced()) { $('roundChip').textContent = 'Year complete'; $('roundChip').className = 'chip'; }
+  else if (open) {
     const mins = Math.max(0, Math.round((new Date(S.round.closes_at) - Date.now()) / 60000));
     $('roundChip').textContent = `Chapter ${S.round.number} · ${mins} min`; $('roundChip').className = 'chip live';
   } else { $('roundChip').textContent = S.cohort.current_round ? `Chapter ${S.cohort.current_round} closed` : 'Not started'; $('roundChip').className = 'chip'; }
-  const ch = open ? chapterOf(S.round.number) : null;
-  $('decideDot').classList.toggle('hidden', !(open && chapterSteps(ch, S.player.profile, S.household, S.my_decisions).some(s => !s.chosen)));
+  const ch = open ? chapterOf(curN()) : null;
+  $('decideDot').classList.toggle('hidden', !(open && chapterSteps(ch, S.player.profile, S.household, myPicks()).some(s => !s.chosen)));
   renderSetup();
   renderStory();
   renderFamily();
@@ -71,7 +77,7 @@ function situation(h, prevHist, title = 'Your situation') {
 
 function communityBox(h, prevHist) {
   if (!prevHist) return '';
-  const m = h.loc === 'away' ? (h.homeMuni || h.muni) : h.muni, c = S.world?.public?.community?.[m];
+  const m = h.loc === 'away' ? (h.homeMuni || h.muni) : h.muni, pub = S.world?.public || {}, c = (pub.communityByCh?.[(h.story || []).length] || pub.community)?.[m];
   if (!c) return '';
   const mine = (h.lci || {}).worst || 1, area = c.phase20;
   const cmp = mine > area ? `Your family is worse off than ${esc(MUNIS[m]?.name)} as a whole. An area classified phase ${area} can hide households like yours: on an area map, you are invisible unless someone looks for pockets of concern.`
@@ -92,11 +98,11 @@ function renderStory() {
     const nextCh = chapterOf((S.cohort.current_round || 0) + 1);
     $('tab-decide').innerHTML = banner + (last ? `<div class="card"><div class="kicker">After chapter ${last.ch} · ${esc(last.title)}</div>${paras(h.pending)}</div>` : '') +
       situation(h, (h.history || []).at(-2)) +
-      `<div class="card"><p class="small">${nextCh ? `Next: <b>Chapter ${nextCh.n} · ${esc(nextCh.title)}</b> (${esc(nextCh.time)}). Your phone will buzz when it opens.` : 'There are no more chapters yet.'}</p><p class="small muted">Your family’s story so far is under <b>Your year</b>.</p></div>`;
+      `<div class="card"><p class="small">${selfPaced() ? '<b>That is the end of your family’s first year.</b> Look back at it under <b>Your year</b>, and compare notes with others who played the same family.' : nextCh ? `Next: <b>Chapter ${nextCh.n} · ${esc(nextCh.title)}</b> (${esc(nextCh.time)}). Your phone will buzz when it opens.` : 'There are no more chapters yet.'}</p><p class="small muted">Your family’s story so far is under <b>Your year</b>.</p></div>`;
     return;
   }
-  const ch = chapterOf(S.round.number);
-  const steps = chapterSteps(ch, S.player.profile, h, S.my_decisions);
+  const ch = chapterOf(curN()), picks = myPicks();
+  const steps = chapterSteps(ch, S.player.profile, h, picks);
   let html = banner + `<div class="kicker" style="margin-top:14px">Chapter ${ch.n} · ${esc(ch.time)}</div><h1>${esc(ch.title)}</h1>`;
   if (ch.n > 1 && h.pending?.length) html += `<div class="card"><div class="kicker">Since last time</div>${paras(h.pending)}</div>`;
   if (ch.valley?.length) html += `<div class="card valley"><div class="kicker">Meanwhile in the valley</div>${paras(ch.valley)}</div>`;
@@ -116,11 +122,13 @@ function renderStory() {
     if (shown) { html += `<div class="card muted small">${label} comes next.</div>`; return; }
     shown = true;
     html += `<div class="card current"><div class="kicker">${label}</div><h2>${esc(st.prompt)}</h2><div class="opts">` +
-      (st.options.length ? '' : '<p class="small muted">Nothing you can do here right now — this decision will pass.</p>') + st.options.map(o => `<button class="opt ${S.my_decisions[st.id] === o.id ? 'sel' : ''}" data-kind="${st.id}" data-opt="${o.id}"><b>${esc(o.label)}</b><span>${esc(o.detail || '')}</span>${chipsHtml(effectChips(o))}</button>`).join('') + `</div></div>`;
+      (st.options.length ? '' : '<p class="small muted">Nothing you can do here right now — this decision will pass.</p>') + st.options.map(o => `<button class="opt ${picks[st.id] === o.id ? 'sel' : ''}" data-kind="${st.id}" data-opt="${o.id}"><b>${esc(o.label)}</b><span>${esc(o.detail || '')}</span>${chipsHtml(effectChips(o))}</button>`).join('') + `</div></div>`;
   });
-  if (!shown) html += `<div class="card ok"><b>That’s this chapter.</b><p class="small" style="margin:6px 0 0">When it closes, you’ll find out what happened next — to your family, and to the valley.</p></div>`;
+  if (!shown && selfPaced()) html += `<div class="card ok"><b>That’s this chapter.</b><p class="small" style="margin:6px 0 10px">Change any decision above, or move on to find out what happened next — to your family, and to the valley.</p><button id="advanceBtn" class="full">${chapterOf(ch.n + 1) ? `Continue to Chapter ${ch.n + 1}` : 'See how the year ends'}</button></div>`;
+  else if (!shown) html += `<div class="card ok"><b>That’s this chapter.</b><p class="small" style="margin:6px 0 0">When it closes, you’ll find out what happened next — to your family, and to the valley.</p></div>`;
   $('tab-decide').innerHTML = html;
   $('tab-decide').querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => decide(b.dataset.kind, b.dataset.opt)));
+  $('advanceBtn')?.addEventListener('click', advance);
   $('tab-decide').querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => { editing = b.dataset.edit; renderStory(); }));
 }
 
@@ -151,7 +159,28 @@ function renderYear() {
   $('tab-news').innerHTML = (msgs ? `<div class="card"><div class="kicker">From your facilitator</div>${msgs}</div>` : '') + (entries || '<div class="card"><p class="muted">Your family’s year will be written here, chapter by chapter.</p></div>');
 }
 
+async function advance() {
+  if (saving) return; saving = true;
+  const btn = $('advanceBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Writing the next chapter…'; }
+  try {
+    const n = curN();
+    const r = await fetch('/api/advance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, chapter: n, picks: myPicks() }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok && j.error !== 'stale') throw new Error(j.error || 'Could not continue');
+    localStorage.removeItem(`aftershock_picks_${token}_${n}`);
+    editing = null; await refresh(); window.scrollTo(0, 0);
+  } catch (e) { alert(e.message); if (btn) { btn.disabled = false; btn.textContent = 'Try again'; } }
+  finally { saving = false; }
+}
+
 async function decide(kind, opt) {
+  if (selfPaced()) {
+    const ch = chapterOf(curN()), p = { ...myPicks(), [kind]: opt };
+    // a changed earlier decision can change what later ones offer: drop picks that are no longer available
+    const steps = chapterSteps(ch, S.player.profile, S.household, p);
+    for (const st of steps) if (p[st.id] && !st.chosen) delete p[st.id];
+    localStorage.setItem(picksKey(), JSON.stringify(p)); editing = null; render(); return;
+  }
   if (saving) return; saving = true;
   try { await rpc('submit_decision', { p_token: token, p_round: S.round.number, p_kind: kind, p_option: opt }); S.my_decisions[kind] = opt; editing = null; render(); refresh(); }
   catch (e) { alert(e.message === 'round not open' ? 'This chapter has closed.' : e.message); refresh(); }
@@ -161,9 +190,9 @@ async function decide(kind, opt) {
 // ---------------------------------------------------------------- chapter card
 function maybeChapterCard() {
   if (!isOpen() || !$('intro').classList.contains('hidden')) return;
-  const key = `aftershock_seen_${token}_${S.round.number}`;
+  const key = `aftershock_seen_${token}_${curN()}`;
   if (localStorage.getItem(key) || !localStorage.getItem('aftershock_intro_' + token)) return;
-  const ch = chapterOf(S.round.number);
+  const ch = chapterOf(curN());
   $('rolecard').innerHTML = `<div class="rc role-family"><div class="kicker">${esc(fam().name)}</div>
     <p style="margin:16px 0 4px">Chapter ${ch.n} · ${esc(ch.time)}</p><h1 style="font-size:30px;margin:0 0 12px">${esc(ch.title)}</h1>
     <p class="small" style="opacity:.85">${ch.steps.length} decisions. A few minutes.</p>
@@ -187,12 +216,12 @@ function introSteps() {
   const F = fam(), h = S.household;
   return [
     { k: 'Aftershock', t: 'Welcome to the Vara valley', b: `${STORY.video ? `<video src="${STORY.video}" controls playsinline style="width:100%;border-radius:12px"></video>` : mapSvg(null, null)}${paras(STORY.place)}<p class="small muted">${esc(STORY.fictional)}</p>` },
-    { k: 'How to play', t: 'How Aftershock works', b: `<div class="howlist">${HOW.map(x => `<div><b>${esc(x.t)}</b>${esc(x.d)}</div>`).join('')}</div>` },
+    { k: 'How to play', t: 'How Aftershock works', b: `<div class="howlist">${HOW.map(x => selfPaced() && x.t.startsWith('Your phone') ? { t: 'Go at your own pace', d: 'Each chapter takes about five minutes. Move on when you are ready; you can stop and come back any time.' } : x).map(x => `<div><b>${esc(x.t)}</b>${esc(x.d)}</div>`).join('')}</div>` },
     { k: 'Your family', t: F.name, b: `<div class="role role-family"><h2>${esc(F.name)}</h2><div class="small">${esc(F.who)}</div></div><p>${esc(F.people)}</p>${mapSvg(h, S.player.profile)}` },
     { k: 'Reading the situation', t: 'Living conditions, phase 1 to 5', b: `<p>Your family’s situation is measured on four dimensions, using the same 1–5 phases as the Living Conditions Index — green is fine, red is catastrophic.</p>
       <div class="legend">${PHASES.map((x, i) => `<span class="ph${i + 1}">${i + 1}<br>${x}</span>`).join('')}</div>
       ${Object.entries(DIMS).map(([k, d]) => `<div class="dim"><div class="head"><b>${d.label}</b></div><div class="small muted">${DIM_PLAIN[k]}</div></div>`).join('')}` },
-    { k: 'Ready', t: 'It is 21:40 on a cold Tuesday', b: `<p>Your phone will buzz when the first chapter opens. Find a quiet five minutes, and read it as if it were happening to you.</p><p>Tap <b>?</b> at the top any time to see this again.</p><div id="introSetup"></div>` },
+    { k: 'Ready', t: 'It is 21:40 on a cold Tuesday', b: `<p>${selfPaced() ? 'Chapter 1 is ready when you are.' : 'Your phone will buzz when the first chapter opens.'} Find a quiet five minutes, and read it as if it were happening to you.</p><p>Tap <b>?</b> at the top any time to see this again.</p><div id="introSetup"></div>` },
   ];
 }
 function showIntro(step = 0) {

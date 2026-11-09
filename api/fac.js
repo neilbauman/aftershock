@@ -39,6 +39,20 @@ export default async function handler(req, res) {
         await push(data.subs.filter(s => !s.is_facilitator), { title: `${data.cohort.name} · Restarted`, body: 'The facilitator has restarted the game. Your family is back at the beginning.', url: `/play.html?c=${b.code}` });
         break;
       }
+      case 'mode': {
+        const data = await load(b.code);
+        const humans = data.players.filter(p => !p.npc && data.households[p.id]);
+        if (b.mode === 'self') {
+          if (data.rounds.some(r => r.number === data.cohort.current_round && r.status === 'open')) throw new Error('Close the open chapter first.');
+        } else {
+          const lens = [...new Set(humans.map(p => data.households[p.id].story?.length || 0))];
+          if (lens.length > 1) throw new Error('Players are at different chapters. Restart the cohort to switch to facilitated chapters.');
+          await rpc('srv_save', { p_secret: SECRET, p_cohort: data.cohort.id, p_patch: { cohort: { current_round: lens[0] || 0, status: 'playing' } } });
+        }
+        await rpc('srv_save', { p_secret: SECRET, p_cohort: data.cohort.id, p_patch: { world: { ...data.world, public: { ...data.world.public, mode: b.mode === 'self' ? 'self' : 'live' } } } });
+        out = { mode: b.mode };
+        break;
+      }
       case 'takeover': out = await ops.takeover(b.code, b.playerId, b.kind, b.optionId); break;
       case 'testpush': {
         const data = await load(b.code);
