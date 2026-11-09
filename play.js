@@ -1,4 +1,4 @@
-import { CHAPTERS, FAMILIES, DIMS, PHASES, LOCATIONS, MUNIS, chapterOf, chapterSteps, texts, phaseOf } from '/lib/chapters.js';
+import { CHAPTERS, FAMILIES, DIMS, PHASES, LOCATIONS, MUNIS, chapterOf, chapterSteps, texts, phaseOf, lifeNow, STYPES, stypeOf } from '/lib/chapters.js';
 import { STORY, DIM_PLAIN, effectChips, previewPhases, mapSvg, md } from '/lib/story.js';
 import * as members from '/members.js';
 
@@ -64,7 +64,7 @@ function situation(h, prevHist, title = 'Your situation') {
     return `<div class="dim"><div class="head"><span><b>${d.short}</b> <span class="small muted">${esc(d.text[p - 1])}</span>${arrow}</span><span class="ph ph${p}">${p}</span></div></div>`;
   }).join('');
   return `<div class="card"><div class="kicker">${title}</div>
-    <p style="margin:6px 0"><b>Where you are:</b> ${esc(LOCATIONS[h.loc] || h.loc)}, ${esc(MUNIS[h.muni]?.name || '')}</p>
+    <p style="margin:6px 0"><b>Where you are:</b> ${esc(LOCATIONS[h.loc] || h.loc)}, ${esc(MUNIS[h.muni]?.name || '')} <span class="small muted">· ${esc(STYPES[stypeOf(h)]?.label || '')}</span></p>
     <div class="res" style="margin-bottom:8px"><div>Cash<b>${Math.round(h.res.cash)}</b></div><div>Debt<b>${Math.round(h.res.debt || 0)}</b></div>
     <div>${S.player.profile === 'mendes' ? 'Animals' : 'Tools &amp; stock'}<b>${Math.round(h.res.assets)}</b></div><div>On an aid list<b>${h.known ? 'Yes' : 'No'}</b></div></div>${rows}</div>`;
 }
@@ -86,6 +86,7 @@ function renderStory() {
   if (ch.n > 1 && h.pending?.length) html += `<div class="card"><div class="kicker">Since last time</div>${paras(h.pending)}</div>`;
   if (ch.valley?.length) html += `<div class="card valley"><div class="kicker">Meanwhile in the valley</div>${paras(ch.valley)}</div>`;
   html += `<div class="card story">${paras(texts(ch.scene[S.player.profile], h, S.player.profile))}</div>`;
+  if (ch.n > 1) html += `<div class="card life"><div class="kicker">Your life now</div>${paras(lifeNow(h, S.player.profile))}</div>`;
   html += ch.n === 1 ? situation(h, null, 'Before the earthquake') : situation(h, (h.history || []).at(-2));
   let shown = false;
   steps.forEach((st, i) => {
