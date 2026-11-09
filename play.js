@@ -84,6 +84,7 @@ function renderStory() {
   const steps = chapterSteps(ch, S.player.profile, h, S.my_decisions);
   let html = banner + `<div class="kicker" style="margin-top:14px">Chapter ${ch.n} · ${esc(ch.time)}</div><h1>${esc(ch.title)}</h1>`;
   if (ch.n > 1 && h.pending?.length) html += `<div class="card"><div class="kicker">Since last time</div>${paras(h.pending)}</div>`;
+  if (ch.valley?.length) html += `<div class="card valley"><div class="kicker">Meanwhile in the valley</div>${paras(ch.valley)}</div>`;
   html += `<div class="card story">${paras(texts(ch.scene[S.player.profile], h, S.player.profile))}</div>`;
   html += situation(h, (h.history || []).at(-2));
   let shown = false;
@@ -99,9 +100,9 @@ function renderStory() {
     if (shown) { html += `<div class="card muted small">${label} comes next.</div>`; return; }
     shown = true;
     html += `<div class="card current"><div class="kicker">${label}</div><h2>${esc(st.prompt)}</h2><div class="opts">` +
-      st.options.map(o => `<button class="opt ${S.my_decisions[st.id] === o.id ? 'sel' : ''}" data-kind="${st.id}" data-opt="${o.id}"><b>${esc(o.label)}</b><span>${esc(o.detail || '')}</span>${chipsHtml(effectChips(o))}</button>`).join('') + `</div></div>`;
+      (st.options.length ? '' : '<p class="small muted">Nothing you can do here right now — this decision will pass.</p>') + st.options.map(o => `<button class="opt ${S.my_decisions[st.id] === o.id ? 'sel' : ''}" data-kind="${st.id}" data-opt="${o.id}"><b>${esc(o.label)}</b><span>${esc(o.detail || '')}</span>${chipsHtml(effectChips(o))}</button>`).join('') + `</div></div>`;
   });
-  if (!shown) html += `<div class="card ok"><b>That’s this chapter.</b><p class="small" style="margin:6px 0 0">When it closes, you’ll find out what happened next — including whether anyone came.</p></div>`;
+  if (!shown) html += `<div class="card ok"><b>That’s this chapter.</b><p class="small" style="margin:6px 0 0">When it closes, you’ll find out what happened next — to your family, and to the valley.</p></div>`;
   $('tab-decide').innerHTML = html;
   $('tab-decide').querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => decide(b.dataset.kind, b.dataset.opt)));
   $('tab-decide').querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => { editing = b.dataset.edit; renderStory(); }));
@@ -157,7 +158,7 @@ function maybeChapterCard() {
 
 // ---------------------------------------------------------------- intro
 const HOW = [
-  { t: 'You are one family, for one year', d: 'From the night of the earthquake to the anniversary, in about eight chapters over three days.' },
+  { t: 'You are one family, for one year', d: 'From the night of the earthquake to the anniversary, in eight chapters over three days.' },
   { t: 'Each chapter is a scene in your family’s story', d: 'Read what has happened, look at your situation, then make two or three decisions. Each one shows what happens straight away.' },
   { t: 'The first responders are you', d: 'Neighbours, family and local organisations are there from the first hour. International help arrives later — and not to everyone.' },
   { t: 'Your choices shape your story', d: 'Where you sleep, who you tell, what you sell and who you help change what comes next — and who can find you.' },
